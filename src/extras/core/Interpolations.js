@@ -76,4 +76,19 @@ function CubicBezier( t, p0, p1, p2, p3 ) {
 
 }
 
-export { CatmullRom, QuadraticBezier, CubicBezier };
+function NDegreeBezier( t, controlPoints, binomialCoefficients ) {
+
+	const intermediates = [];
+	// the explicit bezier curve formula goes from 0 to n. I.E. for n = 3, there are 4 control points that enumerate as, 0, 1, 2, 3.
+	const n = controlPoints.length - 1;
+	for ( let i = 0; i < controlPoints.length; i ++ ) {
+
+		intermediates[ i ] = binomialCoefficients[ i ] * Math.pow( t, i ) * Math.pow( ( 1 - t ), ( n - i ) ) * controlPoints[ i ];
+
+	}
+
+	return intermediates.reduce( ( a, b ) => a + b );
+
+}
+
+export { CatmullRom, QuadraticBezier, CubicBezier, NDegreeBezier };
