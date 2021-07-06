@@ -78,6 +78,7 @@ import './src/extras/curves/CubicBezierCurve3.tests';
 import './src/extras/curves/EllipseCurve.tests';
 import './src/extras/curves/LineCurve.tests';
 import './src/extras/curves/LineCurve3.tests';
+import './src/extras/curves/NDegreeBezierCurve3.tests';
 import './src/extras/curves/QuadraticBezierCurve.tests';
 import './src/extras/curves/QuadraticBezierCurve3.tests';
 import './src/extras/curves/SplineCurve.tests';

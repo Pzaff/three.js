@@ -32,13 +32,82 @@ QUnit.assert.fail = function ( message ) {
 QUnit.assert.numEqual = function ( actual, expected, message ) {
 
 	var diff = Math.abs( actual - expected );
-	message = message || ( actual + " should be equal to " + expected );
+	message = message || ( actual + ' should be equal to ' + expected );
 	this.pushResult( {
 		result: diff < 0.1,
 		actual: actual,
 		expected: expected,
 		message: message
 	} );
+
+};
+
+QUnit.assert.numEqualWithinEpsilon = function ( actual, expected, epsilon, message ) {
+
+	const diff = Math.abs( actual - expected );
+	message = message || ( actual + ' should be equal to ' + expected + ' with epsilon, ' + epsilon );
+	this.pushResult( {
+		result: diff < epsilon,
+		actual: actual,
+		expected: expected,
+		message: message
+	} );
+
+};
+
+QUnit.assert.vector3EqualWithinEpsilon = function ( actual, expected, epsilon, message ) {
+
+	const diffX = Math.abs( actual.x - expected.x );
+	const diffY = Math.abs( actual.y - expected.y );
+	const diffZ = Math.abs( actual.z - expected.z );
+	message = message || ( actual + ' should be equal to ' + expected + ' with epsilon, ' + epsilon );
+	this.pushResult( {
+		result: diffX < epsilon && diffY < epsilon && diffZ < epsilon,
+		actual: actual,
+		expected: expected,
+		message: message
+	} );
+
+};
+
+QUnit.assert.vector3ArrayEqualWithinEpsilon = function ( actual, expected, epsilon, message ) {
+
+	const len = actual.length;
+	if ( len !== expected.length ) {
+
+		return false;
+
+	}
+
+
+	for ( let i = 0; i < len; i ++ ) {
+
+		if ( Array.isArray( actual[ i ] ) ) {
+
+			if ( ! Array.isArray( expected[ i ] ) ) {
+
+				message = message || ( actual + ' should be equal to ' + expected );
+				this.pushResult( {
+					result: false,
+					actual: actual,
+					expected: expected,
+					message: message
+				} );
+
+			} else {
+
+				QUnit.assert.vector3ArrayEqualWithinEpsilon( actual[ i ], expected[ i ], epsilon, message );
+
+			}
+
+		} else {
+
+			// console.log( actual[ i ], expected[ i ] );
+			QUnit.assert.vector3EqualWithinEpsilon( actual[ i ], expected[ i ], epsilon, message );
+
+		}
+
+	}
 
 };
 
@@ -80,8 +149,8 @@ function checkGeometryClone( geom ) {
 
 	// Clone
 	var copy = geom.clone();
-	QUnit.assert.notEqual( copy.uuid, geom.uuid, "clone uuid should differ from original" );
-	QUnit.assert.notEqual( copy.id, geom.id, "clone id should differ from original" );
+	QUnit.assert.notEqual( copy.uuid, geom.uuid, 'clone uuid should differ from original' );
+	QUnit.assert.notEqual( copy.id, geom.id, 'clone id should differ from original' );
 
 	var excludedProperties = [ 'parameters', 'widthSegments', 'heightSegments', 'depthSegments' ];
 
@@ -127,10 +196,10 @@ function getDifferingProp( geometryA, geometryB, excludedProperties ) {
 // Compare json file with its source geometry.
 function checkGeometryJsonWriting( geom, json ) {
 
-	QUnit.assert.equal( json.metadata.version, "4.5", "check metadata version" );
+	QUnit.assert.equal( json.metadata.version, '4.5', 'check metadata version' );
 	QUnit.assert.equalKey( geom, json, 'type' );
 	QUnit.assert.equalKey( geom, json, 'uuid' );
-	QUnit.assert.equal( json.id, undefined, "should not persist id" );
+	QUnit.assert.equal( json.id, undefined, 'should not persist id' );
 
 	var params = geom.parameters;
 	if ( ! params ) {
@@ -149,7 +218,7 @@ function checkGeometryJsonWriting( geom, json ) {
 
 	// All parameters from json should be transfered to the geometry.
 	// json is flat. Ignore first level json properties that are not parameters.
-	var notParameters = [ "metadata", "uuid", "type" ];
+	var notParameters = [ 'metadata', 'uuid', 'type' ];
 	var keys = Object.keys( json );
 	for ( var i = 0, l = keys.length; i < l; i ++ ) {
 
@@ -215,7 +284,7 @@ function checkFinite( geom ) {
 
 	// TODO Buffers, normal, etc.
 
-	QUnit.assert.ok( allVerticesAreFinite, "contains only finite coordinates" );
+	QUnit.assert.ok( allVerticesAreFinite, 'contains only finite coordinates' );
 
 }
 
@@ -254,7 +323,7 @@ function runStdLightTests( assert, lights ) {
 
 		// THREE.Light doesn't get parsed by ObjectLoader as it's only
 		// used as an abstract base class - so we skip the JSON tests
-		if ( light.type !== "Light" ) {
+		if ( light.type !== 'Light' ) {
 
 			// json round trip
 			checkLightJsonRoundtrip( assert, light );
@@ -271,29 +340,29 @@ function checkLightCopyClone( assert, light ) {
 	var newLight = new light.constructor( 0xc0ffee );
 	newLight.copy( light );
 
-	QUnit.assert.notEqual( newLight.uuid, light.uuid, "Copied light's UUID differs from original" );
-	QUnit.assert.notEqual( newLight.id, light.id, "Copied light's id differs from original" );
-	QUnit.assert.smartEqual( newLight, light, "Copied light is equal to original" );
+	QUnit.assert.notEqual( newLight.uuid, light.uuid, 'Copied light\'s UUID differs from original' );
+	QUnit.assert.notEqual( newLight.id, light.id, 'Copied light\'s id differs from original' );
+	QUnit.assert.smartEqual( newLight, light, 'Copied light is equal to original' );
 
 	// real copy?
 	newLight.color.setHex( 0xc0ffee );
 	QUnit.assert.notStrictEqual(
-		newLight.color.getHex(), light.color.getHex(), "Copied light is independent from original"
+		newLight.color.getHex(), light.color.getHex(), 'Copied light is independent from original'
 	);
 
 	// Clone
 	var clone = light.clone(); // better get a new var
-	QUnit.assert.notEqual( clone.uuid, light.uuid, "Cloned light's UUID differs from original" );
-	QUnit.assert.notEqual( clone.id, light.id, "Clone light's id differs from original" );
-	QUnit.assert.smartEqual( clone, light, "Clone light is equal to original" );
+	QUnit.assert.notEqual( clone.uuid, light.uuid, 'Cloned light\'s UUID differs from original' );
+	QUnit.assert.notEqual( clone.id, light.id, 'Clone light\'s id differs from original' );
+	QUnit.assert.smartEqual( clone, light, 'Clone light is equal to original' );
 
 	// real clone?
 	clone.color.setHex( 0xc0ffee );
 	QUnit.assert.notStrictEqual(
-		clone.color.getHex(), light.color.getHex(), "Clone light is independent from original"
+		clone.color.getHex(), light.color.getHex(), 'Clone light is independent from original'
 	);
 
-	if ( light.type !== "Light" ) {
+	if ( light.type !== 'Light' ) {
 
 		// json round trip with clone
 		checkLightJsonRoundtrip( assert, clone );
@@ -305,12 +374,12 @@ function checkLightCopyClone( assert, light ) {
 // Compare json file with its source Light.
 function checkLightJsonWriting( assert, light, json ) {
 
-	assert.equal( json.metadata.version, "4.5", "check metadata version" );
+	assert.equal( json.metadata.version, '4.5', 'check metadata version' );
 
 	var object = json.object;
 	assert.equalKey( light, object, 'type' );
 	assert.equalKey( light, object, 'uuid' );
-	assert.equal( object.id, undefined, "should not persist id" );
+	assert.equal( object.id, undefined, 'should not persist id' );
 
 }
 
