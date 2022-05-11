@@ -88,6 +88,71 @@ class NDegreeBezierCurve3 extends Curve {
 
 	}
 
+	subdivide( balance ) {
+
+		/**
+		 * Subdivides the curve into the balance. If balance = 0.5, then it will be subdivided by the midpoint.
+		 */
+
+		let interimPoints = this.controlPoints;
+		const firstIntervalControlPoints = [];
+		const secondIntervalControlPoints = [];
+
+		// Add the starting and ending points of this curve.
+		firstIntervalControlPoints.push( this.controlPoints[ 0 ] );
+		secondIntervalControlPoints.push( this.controlPoints[ this.controlPoints.length - 1 ] );
+
+		while ( interimPoints.length > 1 ) {
+
+			const newInterimPoints = [];
+
+			// Iterate over all the current interim points to find the new internal points.
+			for ( let i = 0; i < interimPoints.length - 1; i ++ ) {
+
+				const internalPt = this._findInterimPoint( interimPoints[ i ], interimPoints[ i + 1 ], balance );
+				newInterimPoints.push( internalPt );
+
+				// The only internal points we care about are the first and last of each iteration
+				if ( i === 0 ) {
+
+					firstIntervalControlPoints.push( internalPt );
+
+				}
+
+				if ( i === interimPoints.length - 2 ) {
+
+					secondIntervalControlPoints.push( internalPt );
+
+				}
+
+			}
+
+			interimPoints = newInterimPoints;
+
+		}
+
+		// Reverse the second one since we built it backwards (last point to first)
+		return [ new NDegreeBezierCurve3( firstIntervalControlPoints ), new NDegreeBezierCurve3( secondIntervalControlPoints.reverse() ) ];
+
+	}
+
+	_findInterimPoint( controlPoint1, controlPoint2, balance ) {
+
+		/**
+		 * Find the interim point between two control points. The balance, which is number between (0, 1), is how close
+		 * to one control point vs the other the interim point lives. For example, if balance = 0.5 the midpoint will be
+		 * found between the two control points. If it is 0.75, then the interim point is 75% of the way to control point
+		 * 2 when moving from control point 1 to control point 2.
+		 */
+
+		const midpointX = controlPoint1.x + ( controlPoint2.x - controlPoint1.x ) / balance;
+		const midpointY = controlPoint1.y + ( controlPoint2.y - controlPoint1.y ) / balance;
+		const midpointZ = controlPoint1.z + ( controlPoint2.z - controlPoint1.z ) / balance;
+
+		return new Vector3( midpointX, midpointY, midpointZ );
+
+	}
+
 	copy( source ) {
 
 		super.copy( source );
