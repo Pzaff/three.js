@@ -2,6 +2,7 @@
  * Bezier Curves formulas obtained from
  * https://en.wikipedia.org/wiki/B%C3%A9zier_curve
  */
+import { Vector3 } from '../../math/Vector3';
 
 function CatmullRom( t, p0, p1, p2, p3 ) {
 
@@ -76,7 +77,23 @@ function CubicBezier( t, p0, p1, p2, p3 ) {
 
 }
 
+// TODO: PDZ- in theory this should work just as well as the individual component function call. However, in reality, this one doesn't render. My hypothesis is that the .add() and .multiply scalar function calls are the issues.
 function NDegreeBezier( t, controlPoints, binomialCoefficients ) {
+
+	let evaluatedPoint = new Vector3( 0, 0, 0 );
+	// the explicit bezier curve formula goes from 0 to n. I.E. for n = 3, there are 4 control points that enumerate as, 0, 1, 2, 3.
+	const n = controlPoints.length - 1;
+	for ( let i = 0; i < controlPoints.length; i ++ ) {
+
+		evaluatedPoint = evaluatedPoint.add( controlPoints[ i ].multiplyScalar( binomialCoefficients[ i ] * Math.pow( t, i ) * Math.pow( ( 1 - t ), ( n - i ) ) ) );
+
+	}
+
+	return evaluatedPoint;
+
+}
+
+function NDegreeBezierIndividualComponent( t, controlPoints, binomialCoefficients ) {
 
 	const intermediates = [];
 	// the explicit bezier curve formula goes from 0 to n. I.E. for n = 3, there are 4 control points that enumerate as, 0, 1, 2, 3.
@@ -91,4 +108,36 @@ function NDegreeBezier( t, controlPoints, binomialCoefficients ) {
 
 }
 
-export { CatmullRom, QuadraticBezier, CubicBezier, NDegreeBezier };
+// //  TODO: PDZ- DON'T USE THIS. It locks up the browser with the number of recursive calls it has.
+// function NDegreeBezierRecursiveIndividualComponent( t, controlPoints, current_point, degree ) {
+//
+// 	if ( degree === 0 ) {
+//
+// 		return controlPoints[ current_point ];
+//
+// 	} else {
+//
+// 		return ( NDegreeBezierRecursiveIndividualComponent( t, controlPoints, current_point, degree - 1 ) * NDegreeBezierRecursiveIndividualComponent( t, controlPoints, current ) * ( 1 - t ) ) + ( NDegreeBezierRecursiveIndividualComponent( t, controlPoints, current_point + 1, degree - 1 ) * t );
+//
+// 	}
+//
+// }
+
+// TODO: PDZ- DON'T USE THIS. It locks up the browser with the number of recursive calls it has.
+function NDegreeBezierRecursive( t, controlPoints, current_point, degree ) {
+
+	if ( degree === 0 ) {
+
+		return controlPoints[ current_point ];
+
+	} else {
+
+		const left = NDegreeBezierRecursive( t, controlPoints, current_point, degree - 1 ).multiplyScalar( 1 - t );
+		const right = NDegreeBezierRecursive( t, controlPoints, current_point + 1, degree - 1 ).multiplyScalar( t );
+		return ( left ).add( right );
+
+	}
+
+}
+
+export { CatmullRom, QuadraticBezier, CubicBezier, NDegreeBezier, NDegreeBezierIndividualComponent, NDegreeBezierRecursive };
