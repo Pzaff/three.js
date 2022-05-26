@@ -1,6 +1,12 @@
 import { Curve } from '../core/Curve.js';
-import { NDegreeBezier } from '../core/Interpolations.js';
+import { NDegreeBezier, NDegreeBezierIndividualComponent, NDegreeBezierRecursive } from '../core/Interpolations.js';
 import { Vector3 } from '../../math/Vector3.js';
+
+// TODO: PDZ- this isn't working at the moment.
+// const BezierEvaluator = {
+// 	RECURSIVE: 'RECURSIVE',
+// 	DIRECT: 'DIRECT'
+// };
 
 
 class NDegreeBezierCurve3 extends Curve {
@@ -57,7 +63,7 @@ class NDegreeBezierCurve3 extends Curve {
 
 	/**
 	 *
-	 * @param controlPoints an array of Vector3 which are the control points for the n-degree Bezier Curve.
+	 * @param controlPoints an array of Vector3 which are the control points for the n-degree Bézier curve.
 	 */
 	constructor( controlPoints ) {
 
@@ -78,21 +84,23 @@ class NDegreeBezierCurve3 extends Curve {
 
 		const point = optionalTarget;
 
-		point.set(
-			NDegreeBezier( t, this.controlPointsX, this.binomialCoefficients ),
-			NDegreeBezier( t, this.controlPointsY, this.binomialCoefficients ),
-			NDegreeBezier( t, this.controlPointsZ, this.binomialCoefficients )
-		);
+		// const degree = this.controlPoints.length - 1;
+		// const bezier_point = this.evaluator === BezierEvaluator.RECURSIVE ? NDegreeBezierRecursive( t, this.controlPoints, 0, degree ) : NDegreeBezier( t, this.controlPoints, this.binomialCoefficients );
+		// point.set( bezier_point.x, bezier_point.y, bezier_point.z );
+		const xPoint = NDegreeBezierIndividualComponent( t, this.controlPointsX, this.binomialCoefficients );
+		const yPoint = NDegreeBezierIndividualComponent( t, this.controlPointsY, this.binomialCoefficients );
+		const zPoint = NDegreeBezierIndividualComponent( t, this.controlPointsZ, this.binomialCoefficients );
+
+		point.set( xPoint, yPoint, zPoint );
 
 		return point;
 
 	}
 
+	/**
+	 * Subdivides the curve into the balance. If balance = 0.5, then it will be subdivided by the midpoint.
+	 */
 	subdivide( balance ) {
-
-		/**
-		 * Subdivides the curve into the balance. If balance = 0.5, then it will be subdivided by the midpoint.
-		 */
 
 		let interimPoints = this.controlPoints;
 		const firstIntervalControlPoints = [];
@@ -136,14 +144,13 @@ class NDegreeBezierCurve3 extends Curve {
 
 	}
 
+	/**
+	 * Find the interim point between two control points. The balance, which is number between (0, 1), is how close
+	 * to one control point vs the other the interim point lives. For example, if balance = 0.5 the midpoint will be
+	 * found between the two control points. If it is 0.75, then the interim point is 75% of the way to control point
+	 * 2 when moving from control point 1 to control point 2.
+	 */
 	_findInterimPoint( controlPoint1, controlPoint2, balance ) {
-
-		/**
-		 * Find the interim point between two control points. The balance, which is number between (0, 1), is how close
-		 * to one control point vs the other the interim point lives. For example, if balance = 0.5 the midpoint will be
-		 * found between the two control points. If it is 0.75, then the interim point is 75% of the way to control point
-		 * 2 when moving from control point 1 to control point 2.
-		 */
 
 		const midpointX = controlPoint1.x + ( controlPoint2.x - controlPoint1.x ) / balance;
 		const midpointY = controlPoint1.y + ( controlPoint2.y - controlPoint1.y ) / balance;
