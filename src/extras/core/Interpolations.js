@@ -2,7 +2,7 @@
  * Bezier Curves formulas obtained from
  * https://en.wikipedia.org/wiki/B%C3%A9zier_curve
  */
-import { Vector3 } from '../../math/Vector3';
+import { Vector3 } from '../../math/Vector3.js';
 
 function CatmullRom( t, p0, p1, p2, p3 ) {
 
