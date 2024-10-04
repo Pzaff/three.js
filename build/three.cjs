@@ -5,6 +5,8 @@
  */
 'use strict';
 
+var three = require('three');
+
 const REVISION = '169dev';
 
 const MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2, ROTATE: 0, DOLLY: 1, PAN: 2 };
@@ -24227,6 +24229,28 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		}
 
+		if ( glFormat === _gl.RGB_INTEGER ) {
+
+			if ( glType === _gl.UNSIGNED_BYTE ) internalFormat = _gl.RGB8UI;
+			if ( glType === _gl.UNSIGNED_SHORT ) internalFormat = _gl.RGB16UI;
+			if ( glType === _gl.UNSIGNED_INT ) internalFormat = _gl.RGB32UI;
+			if ( glType === _gl.BYTE ) internalFormat = _gl.RGB8I;
+			if ( glType === _gl.SHORT ) internalFormat = _gl.RGB16I;
+			if ( glType === _gl.INT ) internalFormat = _gl.RGB32I;
+
+		}
+
+		if ( glFormat === _gl.RGBA_INTEGER ) {
+
+			if ( glType === _gl.UNSIGNED_BYTE ) internalFormat = _gl.RGBA8UI;
+			if ( glType === _gl.UNSIGNED_SHORT ) internalFormat = _gl.RGBA16UI;
+			if ( glType === _gl.UNSIGNED_INT ) internalFormat = _gl.RGBA32UI;
+			if ( glType === _gl.BYTE ) internalFormat = _gl.RGBA8I;
+			if ( glType === _gl.SHORT ) internalFormat = _gl.RGBA16I;
+			if ( glType === _gl.INT ) internalFormat = _gl.RGBA32I;
+
+		}
+
 		if ( glFormat === _gl.RGB ) {
 
 			if ( glType === _gl.UNSIGNED_INT_5_9_9_9_REV ) internalFormat = _gl.RGB9_E5;
@@ -32390,6 +32414,27 @@ class LOD extends Object3D {
 
 	}
 
+	removeLevel( distance ) {
+
+		const levels = this.levels;
+
+		for ( let i = 0; i < levels.length; i ++ ) {
+
+			if ( levels[ i ].distance === distance ) {
+
+				const removedElements = levels.splice( i, 1 );
+				this.remove( removedElements[ 0 ].object );
+
+				return true;
+
+			}
+
+		}
+
+		return false;
+
+	}
+
 	getCurrentLevel() {
 
 		return this._currentLevel;
@@ -34193,6 +34238,42 @@ class BatchedMesh extends Mesh {
 		}
 
 		return drawInfo[ instanceId ].visible;
+
+	}
+
+	setGeometryIdAt( instanceId, geometryId ) {
+
+		// return early if the geometry is out of range or not active
+		const drawInfo = this._drawInfo;
+		if ( instanceId >= drawInfo.length || drawInfo[ instanceId ].active === false ) {
+
+			return null;
+
+		}
+
+		// check if the provided geometryId is within the valid range
+		if ( geometryId < 0 || geometryId >= this._geometryCount ) {
+
+			return null;
+
+		}
+
+		drawInfo[ instanceId ].geometryIndex = geometryId;
+
+		return this;
+
+	}
+
+	getGeometryIdAt( instanceId ) {
+
+		const drawInfo = this._drawInfo;
+		if ( instanceId >= drawInfo.length || drawInfo[ instanceId ].active === false ) {
+
+			return - 1;
+
+		}
+
+		return drawInfo[ instanceId ].geometryIndex;
 
 	}
 
@@ -36073,6 +36154,21 @@ function CubicBezier( t, p0, p1, p2, p3 ) {
 
 	return CubicBezierP0( t, p0 ) + CubicBezierP1( t, p1 ) + CubicBezierP2( t, p2 ) +
 		CubicBezierP3( t, p3 );
+
+}
+
+function NDegreeBezierIndividualComponent( t, controlPoints, binomialCoefficients ) {
+
+	const intermediates = [];
+	// the explicit bezier curve formula goes from 0 to n. I.E. for n = 3, there are 4 control points that enumerate as, 0, 1, 2, 3.
+	const n = controlPoints.length - 1;
+	for ( let i = 0; i < controlPoints.length; i ++ ) {
+
+		intermediates[ i ] = binomialCoefficients[ i ] * Math.pow( t, i ) * Math.pow( ( 1 - t ), ( n - i ) ) * controlPoints[ i ];
+
+	}
+
+	return intermediates.reduce( ( a, b ) => a + b );
 
 }
 
@@ -48213,7 +48309,7 @@ class Audio extends Object3D {
 
 	}
 
-	stop() {
+	stop( delay = 0 ) {
 
 		if ( this.hasPlaybackControl === false ) {
 
@@ -48226,7 +48322,7 @@ class Audio extends Object3D {
 
 		if ( this.source !== null ) {
 
-			this.source.stop();
+			this.source.stop( this.context.currentTime + delay );
 			this.source.onended = null;
 
 		}
@@ -53582,6 +53678,205 @@ class AxesHelper extends LineSegments {
 
 }
 
+// TODO: PDZ- this isn't working at the moment.
+// const BezierEvaluator = {
+// 	RECURSIVE: 'RECURSIVE',
+// 	DIRECT: 'DIRECT'
+// };
+
+
+class NDegreeBezierCurve3 extends Curve {
+
+	// prime the first two rows for the coefficients
+	static _pascalsTriangle = [[ 1 ], [ 1, 1 ]];
+
+	static _getBinomialCoefficients( n ) {
+
+		if ( n <= 0 ) {
+
+			return [];
+
+		}
+
+		if ( this._pascalsTriangle.length <= n ) {
+
+			for ( let i = this._pascalsTriangle.length; i <= n; i ++ ) {
+
+				if ( i >= 2 ) {
+
+					const coefficients = [];
+					const previousCoefficientRow = this._pascalsTriangle[ i - 1 ];
+
+					// Don't go to the end since we don't want to attempt to index beyond the end of the previous coefficients array
+					for ( let j = 0; j < previousCoefficientRow.length; j ++ ) {
+
+						if ( j === 0 ) {
+
+							coefficients[ j ] = 1;
+
+						} else {
+
+							coefficients[ j ] = previousCoefficientRow[ j - 1 ] + previousCoefficientRow[ j ];
+
+						}
+
+					}
+
+					// The last coefficient of the binomial tree will always be 1
+					coefficients[ coefficients.length ] = 1;
+					this._pascalsTriangle[ i ] = coefficients;
+
+				}
+
+			}
+
+		}
+
+		// subtract 1 to adjust for 0 start index
+		return this._pascalsTriangle[ n ];
+
+	}
+
+	/**
+	 *
+	 * @param controlPoints an array of Vector3 which are the control points for the n-degree Bézier curve.
+	 */
+	constructor( controlPoints ) {
+
+		super();
+
+		this.type = 'NDegreeBezierCurve3';
+
+		this.controlPoints = controlPoints;
+		this.controlPointsX = this.controlPoints.map( vec => vec.x );
+		this.controlPointsY = this.controlPoints.map( vec => vec.y );
+		this.controlPointsZ = this.controlPoints.map( vec => vec.z );
+
+		this.binomialCoefficients = NDegreeBezierCurve3._getBinomialCoefficients( controlPoints.length - 1 );
+
+	}
+
+	getPoint( t, optionalTarget = new Vector3() ) {
+
+		const point = optionalTarget;
+
+		// const degree = this.controlPoints.length - 1;
+		// const bezier_point = this.evaluator === BezierEvaluator.RECURSIVE ? NDegreeBezierRecursive( t, this.controlPoints, 0, degree ) : NDegreeBezier( t, this.controlPoints, this.binomialCoefficients );
+		// point.set( bezier_point.x, bezier_point.y, bezier_point.z );
+		const xPoint = NDegreeBezierIndividualComponent( t, this.controlPointsX, this.binomialCoefficients );
+		const yPoint = NDegreeBezierIndividualComponent( t, this.controlPointsY, this.binomialCoefficients );
+		const zPoint = NDegreeBezierIndividualComponent( t, this.controlPointsZ, this.binomialCoefficients );
+
+		point.set( xPoint, yPoint, zPoint );
+
+		return point;
+
+	}
+
+	/**
+	 * Subdivides the curve into the balance. If balance = 0.5, then it will be subdivided by the midpoint.
+	 */
+	subdivide( balance ) {
+
+		let interimPoints = this.controlPoints;
+		const firstIntervalControlPoints = [];
+		const secondIntervalControlPoints = [];
+
+		// Add the starting and ending points of this curve.
+		firstIntervalControlPoints.push( this.controlPoints[ 0 ] );
+		secondIntervalControlPoints.push( this.controlPoints[ this.controlPoints.length - 1 ] );
+
+		while ( interimPoints.length > 1 ) {
+
+			const newInterimPoints = [];
+
+			// Iterate over all the current interim points to find the new internal points.
+			for ( let i = 0; i < interimPoints.length - 1; i ++ ) {
+
+				const internalPt = this._findInterimPoint( interimPoints[ i ], interimPoints[ i + 1 ], balance );
+				newInterimPoints.push( internalPt );
+
+				// The only internal points we care about are the first and last of each iteration
+				if ( i === 0 ) {
+
+					firstIntervalControlPoints.push( internalPt );
+
+				}
+
+				if ( i === interimPoints.length - 2 ) {
+
+					secondIntervalControlPoints.push( internalPt );
+
+				}
+
+			}
+
+			interimPoints = newInterimPoints;
+
+		}
+
+		// Reverse the second one since we built it backwards (last point to first)
+		return [ new NDegreeBezierCurve3( firstIntervalControlPoints ), new NDegreeBezierCurve3( secondIntervalControlPoints.reverse() ) ];
+
+	}
+
+	/**
+	 * Find the interim point between two control points. The balance, which is number between (0, 1), is how close
+	 * to one control point vs the other the interim point lives. For example, if balance = 0.5 the midpoint will be
+	 * found between the two control points. If it is 0.75, then the interim point is 75% of the way to control point
+	 * 2 when moving from control point 1 to control point 2.
+	 */
+	_findInterimPoint( controlPoint1, controlPoint2, balance ) {
+
+		const midpointX = controlPoint1.x + ( controlPoint2.x - controlPoint1.x ) / balance;
+		const midpointY = controlPoint1.y + ( controlPoint2.y - controlPoint1.y ) / balance;
+		const midpointZ = controlPoint1.z + ( controlPoint2.z - controlPoint1.z ) / balance;
+
+		return new Vector3( midpointX, midpointY, midpointZ );
+
+	}
+
+	copy( source ) {
+
+		super.copy( source );
+
+		this.controlPoints.copy( source.controlPoints );
+		this.controlPointsX.copy( source.controlPointsX );
+		this.controlPointsY.copy( source.controlPointsY );
+		this.controlPointsZ.copy( source.controlPointsZ );
+		this.binomialCoefficients.copy( source.binomialCoefficients );
+
+		return this;
+
+	}
+
+	toJSON() {
+
+		const data = super.toJSON();
+
+		data.controlPoints = this.controlPoints.toArray();
+
+		return data;
+
+	}
+
+	fromJSON( json ) {
+
+		super.fromJSON( json );
+
+		this.controlPoints( json.controlPoints );
+		this.controlPointsX = this.controlPoints.map( vec => vec.x );
+		this.controlPointsY = this.controlPoints.map( vec => vec.y );
+		this.controlPointsZ = this.controlPoints.map( vec => vec.z );
+
+		return this;
+
+	}
+
+}
+
+NDegreeBezierCurve3.prototype.isNDegreeBezierCurve3 = true;
+
 class ShapePath {
 
 	constructor() {
@@ -53868,7 +54163,7 @@ class ShapePath {
 
 class Controls extends EventDispatcher {
 
-	constructor( object, domElement ) {
+	constructor( object, domElement = null ) {
 
 		super();
 
@@ -53910,6 +54205,139 @@ class WebGLMultipleRenderTargets extends WebGLRenderTarget { // @deprecated, r16
 	get texture() {
 
 		return this.textures;
+
+	}
+
+}
+
+/**
+ * Parametric Surfaces Geometry
+ * based on the brilliant article by @prideout https://prideout.net/blog/old/blog/index.html@p=44.html
+ */
+
+
+class ParametricGeometry extends three.BufferGeometry {
+
+	constructor( func = ( u, v, target ) => target.set( u, v, Math.cos( u ) * Math.sin( v ) ), slices = 8, stacks = 8 ) {
+
+		super();
+
+		this.type = 'ParametricGeometry';
+
+		this.parameters = {
+			func: func,
+			slices: slices,
+			stacks: stacks
+		};
+
+		// buffers
+
+		const indices = [];
+		const vertices = [];
+		const normals = [];
+		const uvs = [];
+
+		const EPS = 0.00001;
+
+		const normal = new three.Vector3();
+
+		const p0 = new three.Vector3(), p1 = new three.Vector3();
+		const pu = new three.Vector3(), pv = new three.Vector3();
+
+		// generate vertices, normals and uvs
+
+		const sliceCount = slices + 1;
+
+		for ( let i = 0; i <= stacks; i ++ ) {
+
+			const v = i / stacks;
+
+			for ( let j = 0; j <= slices; j ++ ) {
+
+				const u = j / slices;
+
+				// vertex
+
+				func( u, v, p0 );
+				vertices.push( p0.x, p0.y, p0.z );
+
+				// normal
+
+				// approximate tangent vectors via finite differences
+
+				if ( u - EPS >= 0 ) {
+
+					func( u - EPS, v, p1 );
+					pu.subVectors( p0, p1 );
+
+				} else {
+
+					func( u + EPS, v, p1 );
+					pu.subVectors( p1, p0 );
+
+				}
+
+				if ( v - EPS >= 0 ) {
+
+					func( u, v - EPS, p1 );
+					pv.subVectors( p0, p1 );
+
+				} else {
+
+					func( u, v + EPS, p1 );
+					pv.subVectors( p1, p0 );
+
+				}
+
+				// cross product of tangent vectors returns surface normal
+
+				normal.crossVectors( pu, pv ).normalize();
+				normals.push( normal.x, normal.y, normal.z );
+
+				// uv
+
+				uvs.push( u, v );
+
+			}
+
+		}
+
+		// generate indices
+
+		for ( let i = 0; i < stacks; i ++ ) {
+
+			for ( let j = 0; j < slices; j ++ ) {
+
+				const a = i * sliceCount + j;
+				const b = i * sliceCount + j + 1;
+				const c = ( i + 1 ) * sliceCount + j + 1;
+				const d = ( i + 1 ) * sliceCount + j;
+
+				// faces one and two
+
+				indices.push( a, b, d );
+				indices.push( b, c, d );
+
+			}
+
+		}
+
+		// build geometry
+
+		this.setIndex( indices );
+		this.setAttribute( 'position', new three.Float32BufferAttribute( vertices, 3 ) );
+		this.setAttribute( 'normal', new three.Float32BufferAttribute( normals, 3 ) );
+		this.setAttribute( 'uv', new three.Float32BufferAttribute( uvs, 2 ) );
+
+	}
+
+	copy( source ) {
+
+		super.copy( source );
+
+		this.parameters = Object.assign( {}, source.parameters );
+
+		return this;
 
 	}
 
@@ -54159,6 +54587,7 @@ exports.MirroredRepeatWrapping = MirroredRepeatWrapping;
 exports.MixOperation = MixOperation;
 exports.MultiplyBlending = MultiplyBlending;
 exports.MultiplyOperation = MultiplyOperation;
+exports.NDegreeBezierCurve3 = NDegreeBezierCurve3;
 exports.NearestFilter = NearestFilter;
 exports.NearestMipMapLinearFilter = NearestMipMapLinearFilter;
 exports.NearestMipMapNearestFilter = NearestMipMapNearestFilter;
@@ -54193,6 +54622,7 @@ exports.P3Primaries = P3Primaries;
 exports.PCFShadowMap = PCFShadowMap;
 exports.PCFSoftShadowMap = PCFSoftShadowMap;
 exports.PMREMGenerator = PMREMGenerator;
+exports.ParametricGeometry = ParametricGeometry;
 exports.Path = Path;
 exports.PerspectiveCamera = PerspectiveCamera;
 exports.Plane = Plane;

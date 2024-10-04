@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "node16",
+    "lib": ["es2017", "dom"],
+    "allowJs": true,
+    "declarationMap": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "declaration": true,
+    "types": [],
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "dist"
+  },
+  "include": ["index.d.ts", "src/**/*", "examples/jsm/geometries/ParametricGeometry.js"],
+}

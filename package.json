@@ -3,6 +3,7 @@
   "version": "0.168.0",
   "description": "JavaScript 3D library",
   "type": "module",
+  "types": "./dist/index.d.ts",
   "main": "./build/three.cjs",
   "module": "./build/three.module.js",
   "exports": {
@@ -30,7 +31,8 @@
     "LICENSE",
     "package.json",
     "README.md",
-    "src"
+    "src",
+    "examples/jsm/geometries/"
   ],
   "directories": {
     "doc": "docs",

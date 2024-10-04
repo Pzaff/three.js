@@ -146,6 +146,7 @@ export { PlaneHelper } from './helpers/PlaneHelper.js';
 export { ArrowHelper } from './helpers/ArrowHelper.js';
 export { AxesHelper } from './helpers/AxesHelper.js';
 export * from './extras/curves/Curves.js';
+export * from './extras/curves/NDegreeBezierCurve3.js';
 export { Shape } from './extras/core/Shape.js';
 export { Path } from './extras/core/Path.js';
 export { ShapePath } from './extras/core/ShapePath.js';
@@ -161,6 +162,7 @@ export { WebGLUtils } from './renderers/webgl/WebGLUtils.js';
 export { createCanvasElement } from './utils.js';
 export * from './constants.js';
 export * from './Three.Legacy.js';
+export { ParametricGeometry } from '../examples/jsm/geometries/ParametricGeometry.js';
 
 if ( typeof __THREE_DEVTOOLS__ !== 'undefined' ) {
 
